@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITR Acknowledgement Generator Dashboard</title>
+
+    <!-- bwip-js CDN for reliable PDF417 generation -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js-min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-color: #f1f5f9;
+            --border-color: rgb(186, 192, 224);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'DejaVu Sans Condensed', Arial, sans-serif;
+            padding: 20px;
+        }
+
+        /* Password Modal Overlay */
+        #password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgb(2, 2, 2) !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 350px;
+        }
+
+        .modal-box h3 {
+            margin-bottom: 15px;
+            color: #1e293b;
+            font-size: 20px;
+        }
+
+        .modal-box input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal-box button {
+            width: 100%;
+            padding: 10px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-box button:hover {
+            background-color: #2563eb;
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Input Form Dashboard Panel */
+        .control-panel {
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-panel h2 {
+            margin-bottom: 20px;
+            color: #1e293b;
+            font-size: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .input-with-btn {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-with-btn input {
+            flex: 1;
+        }
+
+        .rnd-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .rnd-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .action-bar {
+            grid-column: span 2;
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .generate-btn {
+            flex: 1;
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .generate-btn:hover {
+            background-color: #059669;
+        }
+
+        .print-btn {
+            background-color: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .print-btn:hover {
+            background-color: #4f46e5;
+        }
+
+        /* Printable A4 Page Container */
+        .preview-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .page-container {
+            width: 210mm;
+            height: 297mm;
+            background-color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            background-image: url('C:/Users/CS/Downloads/CODE/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .table-container {
+            width: 189.510mm;
+            height: 248mm;
+            border: 0.5mm solid var(--border-color);
+            position: relative;
+        }
+
+        .topline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            border-bottom: 0.5mm solid black;
+            box-sizing: border-box;
+            position: absolute;
+            top: -3.5%;
+            padding-bottom: 2mm;
+            font-weight: bolder;
+            font-size: 11pt !important;
+        }
+
+        .innertext {
+            display: flex;
+            align-items: start !important;
+            padding-left: 2mm;
+            font-size: 8.7pt;
+            justify-content: center !important;
+            flex-direction: column;
+        }
+
+        .innertext_2 {
+            display: flex;
+            align-items: end !important;
+            padding-right: 2mm;
+            font-size: 8.5pt;
+            justify-content: center !important;
+            flex-direction: column;
+        }
+
+        .table-row {
+            display: flex;
+            width: 100%;
+            height: 8.734mm;
+            border-bottom: 0.35mm solid rgb(186, 192, 224);
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        @media print {
+            #password-modal {
+                display: none !important;
+            }
+
+            .control-panel {
+                display: none !important; /* Added !important to override inline JavaScript styles */
+            }
+
+            body {
+                background: none;
+                padding: 0;
+            }
+
+            .page-container {
+                box-shadow: none;
+                width: 210mm;
+                height: 297mm;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- PASSWORD PROTECTION MODAL -->
+    <div id="password-modal">
+        <div class="modal-box">
+            <h3>🔒 Enter Password</h3>
+            <input type="password" id="access-password" placeholder="Enter security password">
+            <button type="button" onclick="verifyPassword()">Access Dashboard</button>
+            <div id="password-error" class="error-msg">Incorrect Password! Please try again.</div>
+        </div>
+    </div>
+
+    <!-- USER INTERACTIVE DASHBOARD INPUT PANEL -->
+    <div class="control-panel" id="main-dashboard" style="display: none;">
+        <h2>📋 ITR Acknowledgement Data Entry Panel</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>PAN</label>
+                <input type="text" id="input-pan" value="ABCDE1234F">
+            </div>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="input-name" value="RAJESHKUMAR VISHNUKUMAR PATEL">
+            </div>
+            <div class="form-group full-width">
+                <label>Address</label>
+                <input type="text" id="input-address"
+                    value="1-43, BHATHUNJIVALU FALIYU, MUA.ORA TA. VAGRA, BHARUCH, 11-Gujarat, 91- INDIA, 392140">
+            </div>
+            <div class="form-group">
+                <label>Assessment Year</label>
+                <select id="input-assessmentYear">
+                    <option value="2024-25">2024-25</option>
+                    <option value="2025-26">2025-26</option>
+                    <option value="2026-27" selected>2026-27</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Form Number (ITR Type)</label>
+                <select id="input-itrType">
+                    <option value="1">ITR-1</option>
+                    <option value="2">ITR-2</option>
+                    <option value="3">ITR-3</option>
+                    <option value="4" selected>ITR-4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date of Filing (Select or Type)</label>
+                <input type="date" id="input-transmissionDatePicker" style="display:none;"
+                    onchange="syncDateInput(this.value)">
+                <input type="text" id="input-transmissionDate" value="15-Oct-2026" placeholder="DD-Mon-YYYY">
+            </div>
+            <div class="form-group">
+                <label>Filed u/s</label>
+                <select id="input-filedUnderSection">
+                    <option value="139(1)-On or before due date" selected>139(1)-On or before due date</option>
+                    <option value="139(4)-After due date">139(4)-After due date</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Acknowledgement Number Prefix</label>
+                <div class="input-with-btn">
+                    <input type="text" id="input-ackPrefix" placeholder="Auto / 9-digits">
+                    <button type="button" class="rnd-btn" onclick="fillRandomAck()">Random</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Total Income (₹)</label>
+                <input type="number" id="input-totalIncome" value="1208791">
+            </div>
+            <div class="form-group">
+                <label>IP Address</label>
+                <div class="input-with-btn">
+                    <input type="text" id="input-ipAddress">
+                    <button type="button" class="rnd-btn" onclick="fillRandomIP()">Random</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Verification Code (EVC)</label>
+                <div class="input-with-btn">
+                    <input type="text" id="input-verificationCode">
+                    <button type="button" class="rnd-btn" onclick="fillRandomCode()">Random</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Barcode Suffix (Hex)</label>
+                <div class="input-with-btn">
+                    <input type="text" id="input-barcodeSuffix">
+                    <button type="button" class="rnd-btn" onclick="fillRandomBarcode()">Random</button>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button type="button" class="generate-btn" onclick="generateReport()">⚡ Generate & Verify ITR</button>
+                <button type="button" class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINTABLE A4 SHEET PREVIEW -->
+    <div class="preview-container">
+        <div class="page-container"
+            style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <div class="table-container">
+                <div class="topline">
+                    <span>Acknowledgement Number:<span data-field="acknowledgementNumber"></span></span> <span>Date of
+                        filing : <span data-field="acknowledgementDate"></span>*</span>
+                </div>
+                <div
+                    style="display:flex;width:100%;height:20.649mm;border-bottom:0.35mm solid rgb(186,192,224);box-sizing:border-box;">
+                    <div
+                        style="width:152.847mm;height:100%;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);box-sizing:border-box;font-size: 8.2pt;display: flex; align-items: center; justify-content: center;text-align: center;flex-direction: column;line-height: 4mm;">
+                        <span style="font-size: 11pt; font-weight: bolder;border-bottom: 1px solid black;">INDIAN INCOME
+                            TAX RETURN ACKNOWLEDGEMENT</span>
+                        <span>[Where the data of the Return of Income in Form ITR-1(SAHAJ), ITR-2, ITR-3, ITR-4(SUGAM),
+                            ITR-5, ITR-6, ITR-7</span>
+                        <span> filed and verified] </span>
+                        <span>(Please see Rule 12 of the Income-tax Rules, 1962)</span>
+                    </div>
+                    <div
+                        style="flex:1;height:100%;box-sizing:border-box;display: flex; align-items: center;justify-content: center;flex-direction: column; line-height: 5mm;">
+                        <span>Assessment</span> <span>Year</span> <span data-field="assessmentYear"></span>
+                    </div>
+                </div>
+                <div class="table-row">
+                    <div style="width:33.279mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">PAN</div>
+                    <div style="flex:1;" class="innertext" data-field="pan"></div>
+                </div>
+                <div class="table-row">
+                    <div style="width:33.279mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">Name</div>
+                    <div style="flex:1;" class="innertext" data-field="name"></div>
+                </div>
+                <div class="table-row">
+                    <div style="width:33.279mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">Address</div>
+                    <div style="flex:1;" class="innertext" data-field="address"></div>
+                </div>
+                <div class="table-row">
+                    <div style="width:33.279mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">Status</div>
+                    <div style="width:59.558mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext" data-field="status"></div>
+                    <div style="width:59.911mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">Form Number</div>
+                    <div style="flex:1;" class="innertext" data-field="formNumber"></div>
+                </div>
+                <div class="table-row">
+                    <div style="width:33.279mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">Filed u/s</div>
+                    <div style="width:59.558mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext" data-field="filedUnderSection"></div>
+                    <div style="width:59.911mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                        class="innertext">e-Filing Acknowledgement Number</div>
+                    <div style="flex:1;" class="innertext" data-field="acknowledgementNumber"></div>
+                </div>
+
+                <!-- Section 1 -->
+                <div style="display:flex;width:100%;">
+                    <div style="width:10.426mm;flex-shrink:0;height:78.606mm;border-right:0.35mm solid rgb(186,192,224);border-bottom:0.35mm solid rgb(186,192,224);box-sizing:border-box; display: flex; align-items: center !important; justify-content: center !important; padding: 0 !important;"
+                        class="innertext">
+                        <span style="transform: rotate(-90deg); white-space:nowrap;font-weight: bolder;">Taxable Income
+                            and Tax details</span>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Current Year business loss, if any</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">1</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Total Income</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">1A</div>
+                            <div style="width: 100%;" class="innertext_2" data-field="totalIncomeFormatted"></div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Book Profit under MAT, where applicable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">2</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Adjusted Total Income under AMT, where applicable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">3</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Net tax payable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">4</div>
+                            <div style="width: 100%;" class="innertext_2" data-field="netTaxPayableFormatted"></div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Interest and Fee Payable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">5</div>
+                            <div style="width: 100%;" class="innertext_2" data-field="interestFeePayableFormatted">
+                            </div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Total tax, interest and Fee payable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">6</div>
+                            <div style="width: 100%;" class="innertext_2" data-field="totalTaxLiabilityFormatted"></div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Taxes Paid</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">7</div>
+                            <div style="width: 100%;" class="innertext_2" data-field="taxesPaidFormatted"></div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">(+) Tax Payable /(-) Refundable (6-7)</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">8</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2 -->
+                <div style="display:flex;width:100%;">
+                    <div style="width:10.426mm;flex-shrink:0;height:52.404mm;border-right:0.35mm solid rgb(186,192,224);border-bottom:0.35mm solid rgb(186,192,224);box-sizing:border-box; display: flex; align-items: center !important; justify-content: center !important; padding: 0 !important;"
+                        class="innertext">
+                        <span style="transform: rotate(-90deg); white-space:nowrap;font-weight: bolder;">Accreted Income
+                            & Tax Detail</span>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Accreted Income as per section 115TD</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">9</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Additional Tax payable u/s 115TD</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">10</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Interest payable u/s 115TE</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">11</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Additional Tax and interest payable</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">12</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">Tax and interest paid</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">13</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                        <div class="table-row">
+                            <div style="width:123.819mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">(+) Tax Payable /(-) Refundable (12-13)</div>
+                            <div style="width:16.384mm;flex-shrink:0;border-right:0.35mm solid rgb(186,192,224);"
+                                class="innertext">14</div>
+                            <div style="width: 100%;" class="innertext_2">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:block;width:100%;height:24mm;border-bottom:0.35mm solid rgb(186,192,224);box-sizing:border-box; padding: 2mm 3mm;line-height: 5mm; text-align: justify !important; font-size: 9pt;"
+                    class="innertext">
+                    Income Tax Return electronically transmitted on <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="transmissionDate"></span> <span
+                            data-field="transmissionTime"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> from IP
+                    address <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="ipAddress"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> and
+                    veriﬁed by
+                    <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="verifierName"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+                    having PAN <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="verifierPan"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+                    on <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="verificationDate"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+                    using paper ITR-Veriﬁcation Form /Electronic Veriﬁcation Code
+                    <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="verificationCode"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+                    generated through <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                            data-field="verificationMethod"></span></u><u>
+                        OTP&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> mode
+                </div>
+                <div style="display:flex;width:100%;height:21mm;border-bottom:0.35mm solid rgb(186,192,224);box-sizing:border-box; padding-left: 12mm !important;padding-top: 2mm;"
+                    class="innertext">
+                    <span style="line-height: 6mm;">System Generated</span>
+                    <span style="line-height: 6mm;">Barcode/QR Code</span>
+                    <div style="width: 98%;display: flex; align-items: center; justify-content: right;">
+                        <span style="font-weight:bolder;font-size: 8.7pt; margin-bottom: 2mm;position: relative;">
+                            <canvas id="pdf417Barcode"
+                                style="position: absolute; bottom: 130%; left: 2%; height: 12mm; width: 71mm;"></canvas>
+                            <span data-field="generatedBarcodeString"></span>
+                        </span>
+                    </div>
+                </div>
+                <div style="display:flex;width:100%;height:8mm;align-items: center !important;justify-content: center !important;padding: 0 !important;font-weight: bolder;"
+                    class="innertext">
+                    <span style="color: red;"><u>DO NOT SEND THIS ACKNOWLEDGEMENT TO CPC, BENGALURU</u></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC FOR PASSWORD, CALENDAR, TAX ENGINES & RANDOMIZATION -->
+    <script>
+        // Block Refresh Key combinations (F5, Ctrl+R, Ctrl+Shift+R)
+        window.addEventListener('keydown', function (e) {
+            if (
+                e.key === 'F5' || 
+                (e.ctrlKey && e.key.toLowerCase() === 'r') ||
+                (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r')
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert("Page refresh is disabled for security. Please use the dashboard controls.");
+            }
+        });
+
+        function verifyPassword() {
+            const pwd = document.getElementById('access-password').value;
+            if (pwd === "Kalol@123") {
+                sessionStorage.setItem("isLoggedIn", "true");
+                document.getElementById('password-modal').style.display = 'none';
+                document.getElementById('main-dashboard').style.display = 'block';
+            } else {
+                document.getElementById('password-error').style.display = 'block';
+            }
+        }
+
+        // Allow pressing Enter key for password login
+        document.getElementById('access-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                verifyPassword();
+            }
+        });
+
+        function getRandomDigits(length) {
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += Math.floor(Math.random() * 10);
+            }
+            return result;
+        }
+
+        function getRandomHex(length) {
+            const chars = '0123456789abcdef';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return result;
+        }
+
+        function getRandomVerificationCode() {
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            return letters[Math.floor(Math.random() * letters.length)] +
+                letters[Math.floor(Math.random() * letters.length)] +
+                nums[Math.floor(Math.random() * nums.length)] +
+                letters[Math.floor(Math.random() * letters.length)] +
+                nums[Math.floor(Math.random() * nums.length)] +
+                getRandomDigits(5);
+        }
+
+        function getRandomISPAddress() {
+            const pools = [
+                () => `115.246.${Math.floor(Math.random() * 16) + 16}.${Math.floor(Math.random() * 256)}`,
+                () => `150.129.200.${Math.floor(Math.random() * 256)}`,
+                () => `117.212.${Math.floor(Math.random() * 16) + 80}.${Math.floor(Math.random() * 256)}`,
+                () => `103.218.105.${Math.floor(Math.random() * 256)}`
+            ];
+            return pools[Math.floor(Math.random() * pools.length)]();
+        }
+
+        function getRandomTime() {
+            const h = String(Math.floor(Math.random() * 24)).padStart(2, '0');
+            const m = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+            const s = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function fillRandomAck() {
+            document.getElementById('input-ackPrefix').value = getRandomDigits(9);
+        }
+
+        function fillRandomIP() {
+            document.getElementById('input-ipAddress').value = getRandomISPAddress();
+        }
+
+        function fillRandomCode() {
+            document.getElementById('input-verificationCode').value = getRandomVerificationCode();
+        }
+
+        function fillRandomBarcode() {
+            document.getElementById('input-barcodeSuffix').value = getRandomHex(39);
+        }
+
+        function formatIndianNumber(num) {
+            if (isNaN(num)) return "0";
+            let parts = num.toString().split(".");
+            let s = parts[0];
+            let lastThree = s.substring(s.length - 3);
+            let otherNumbers = s.substring(0, s.length - 3);
+            if (otherNumbers !== "") {
+                lastThree = "," + lastThree;
+            }
+            let res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
+            if (parts.length > 1) {
+                res += "." + parts[1];
+            }
+            return res;
+        }
+
+        // Calendar Date input synchronization
+        function syncDateInput(pickerVal) {
+            if (!pickerVal) return;
+            const dateObj = new Date(pickerVal);
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const mon = months[dateObj.getMonth()];
+            const year = dateObj.getFullYear();
+            document.getElementById('input-transmissionDate').value = `${day}-${mon}-${year}`;
+        }
+
+        // Tax Calculation Engine based on Assessment Year
+        function calculateTax(income, assessmentYear) {
+            let tax = 0;
+
+            if (assessmentYear === "2026-27") {
+                // New Tax Regime (AY 2026-27 / FY 2025-26 slabs)
+                if (income > 400000) tax += Math.min(income - 400000, 400000) * 0.05;
+                if (income > 800000) tax += Math.min(income - 800000, 400000) * 0.10;
+                if (income > 1200000) tax += Math.min(income - 1200000, 400000) * 0.15;
+                if (income > 1600000) tax += Math.min(income - 1600000, 400000) * 0.20;
+                if (income > 2000000) tax += Math.min(income - 2000000, 400000) * 0.25;
+                if (income > 2400000) tax += (income - 2400000) * 0.30;
+
+                if (income <= 1200000) {
+                    tax = 0;
+                } else {
+                    let excessIncome = income - 1200000;
+                    if (tax > excessIncome) tax = excessIncome;
+                }
+            } else {
+                // Older Assessment Years (AY 2024-25 and 2025-26 old/new rules where income > 6L attracts tax)
+                if (income > 300000 && income <= 600000) {
+                    tax = (income - 300000) * 0.05;
+                } else if (income > 600000 && income <= 900000) {
+                    tax = 15000 + (income - 600000) * 0.10;
+                } else if (income > 900000 && income <= 1200000) {
+                    tax = 45000 + (income - 900000) * 0.15;
+                } else if (income > 1200000 && income <= 1500000) {
+                    tax = 90000 + (income - 1200000) * 0.20;
+                } else if (income > 1500000) {
+                    tax = 150000 + (income - 1500000) * 0.30;
+                }
+
+                // Rebate u/s 87A check for old regimes
+                if (income <= 700000 && assessmentYear === "2024-25") {
+                    if (tax <= 25000) tax = 0;
+                }
+            }
+
+            let cess = tax * 0.04;
+            return Math.round(tax + cess);
+        }
+
+        function formatDateToDDMMYY(dateStr) {
+            if (!dateStr) return "000000";
+            const months = {jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12"};
+            const parts = dateStr.trim().split(/[-/ .]/);
+            if (parts.length >= 3) {
+                let day = parts[0].padStart(2, '0');
+                let monthStr = parts[1].toLowerCase();
+                let month = months[monthStr] || monthStr.padStart(2, '0');
+                let year = parts[2].slice(-2);
+                return `${day}${month}${year}`;
+            }
+            return "000000";
+        }
+
+        function generateReport() {
+            // Read inputs
+            const pan = document.getElementById('input-pan').value;
+            const name = document.getElementById('input-name').value;
+            const address = document.getElementById('input-address').value;
+            const assessmentYear = document.getElementById('input-assessmentYear').value;
+            const itrType = document.getElementById('input-itrType').value;
+            const transmissionDate = document.getElementById('input-transmissionDate').value;
+            const filedUnderSection = document.getElementById('input-filedUnderSection').value;
+            const totalIncome = parseFloat(document.getElementById('input-totalIncome').value) || 0;
+
+            let ackPrefix = document.getElementById('input-ackPrefix').value;
+            if (!ackPrefix) {
+                ackPrefix = getRandomDigits(9);
+                document.getElementById('input-ackPrefix').value = ackPrefix;
+            }
+
+            let ipAddress = document.getElementById('input-ipAddress').value;
+            if (!ipAddress) {
+                ipAddress = getRandomISPAddress();
+                document.getElementById('input-ipAddress').value = ipAddress;
+            }
+
+            let verificationCode = document.getElementById('input-verificationCode').value;
+            if (!verificationCode) {
+                verificationCode = getRandomVerificationCode();
+                document.getElementById('input-verificationCode').value = verificationCode;
+            }
+
+            let barcodeSuffix = document.getElementById('input-barcodeSuffix').value;
+            if (!barcodeSuffix) {
+                barcodeSuffix = getRandomHex(39);
+                document.getElementById('input-barcodeSuffix').value = barcodeSuffix;
+            }
+
+            const transmissionTime = getRandomTime();
+
+            // Calculations
+            const netTaxPayable = calculateTax(totalIncome, assessmentYear);
+            let interestAndFee = filedUnderSection.includes("139(4)") ? 1000 : 0;
+            const totalTaxPayable = netTaxPayable + interestAndFee;
+
+            const dateSuffix = formatDateToDDMMYY(transmissionDate);
+            const acknowledgementNumber = `${ackPrefix}${dateSuffix}`;
+            const formNumber = `ITR-${itrType}`;
+            const formattedItrType = itrType.padStart(2, '0');
+            const barcodePrefix = `${pan}${formattedItrType}${acknowledgementNumber}`;
+            const generatedBarcodeString = `${barcodePrefix}${barcodeSuffix}`;
+
+            // Map data
+            const dataMap = {
+                acknowledgementNumber: acknowledgementNumber,
+                acknowledgementDate: transmissionDate,
+                assessmentYear: assessmentYear,
+                pan: pan,
+                name: name,
+                address: address,
+                status: "Individual",
+                formNumber: formNumber,
+                filedUnderSection: filedUnderSection,
+                totalIncomeFormatted: formatIndianNumber(totalIncome),
+                netTaxPayableFormatted: formatIndianNumber(netTaxPayable),
+                interestFeePayableFormatted: formatIndianNumber(interestAndFee),
+                totalTaxLiabilityFormatted: formatIndianNumber(totalTaxPayable),
+                taxesPaidFormatted: formatIndianNumber(totalTaxPayable),
+                transmissionDate: transmissionDate,
+                transmissionTime: transmissionTime,
+                ipAddress: ipAddress,
+                verifierName: name,
+                verifierPan: pan,
+                verificationDate: transmissionDate,
+                verificationCode: verificationCode,
+                verificationMethod: "Aadhaar",
+                generatedBarcodeString: generatedBarcodeString
+            };
+
+            // Inject to DOM
+            document.querySelectorAll('[data-field]').forEach(el => {
+                const field = el.getAttribute('data-field');
+                if (dataMap[field] !== undefined) {
+                    el.textContent = dataMap[field];
+                }
+            });
+
+            // Render Barcode
+            try {
+                bwipjs.toCanvas('pdf417Barcode', {
+                    bcid: 'pdf417',
+                    text: generatedBarcodeString,
+                    scale: 3,
+                    height: 12,
+                    includetext: false,
+                    background: 'FFFFFF'
+                });
+            } catch (e) {
+                console.error("Barcode generation failed:", e);
+            }
+        }
+
+        // Auto-run on load (Checks if already logged in during session)
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem("isLoggedIn") === "true") {
+                document.getElementById('password-modal').style.display = 'none';
+                document.getElementById('main-dashboard').style.display = 'block';
+            }
+
+            fillRandomAck();
+            fillRandomIP();
+            fillRandomCode();
+            fillRandomBarcode();
+            generateReport();
+        });
+    </script>
+</body>
+
+</html>

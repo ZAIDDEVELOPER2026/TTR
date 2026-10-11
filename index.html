@@ -48,6 +48,7 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             text-align: center;
             width: 350px;
+            max-width: 90%;
         }
 
         .modal-box h3 {
@@ -135,6 +136,7 @@
             border: 1px solid #cbd5e1;
             border-radius: 4px;
             font-size: 14px;
+            width: 100%;
         }
 
         .input-with-btn {
@@ -167,10 +169,12 @@
             margin-top: 15px;
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .generate-btn {
             flex: 1;
+            min-width: 200px;
             background-color: #10b981;
             color: white;
             border: none;
@@ -204,6 +208,8 @@
         .preview-container {
             display: flex;
             justify-content: center;
+            width: 100%;
+            overflow-x: auto;
         }
 
         .page-container {
@@ -220,6 +226,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            flex-shrink: 0;
         }
 
         .table-container {
@@ -274,13 +281,36 @@
             margin: 0;
         }
 
+        /* Responsive Media Queries */
+        @media screen and (max-width: 850px) {
+            body {
+                padding: 10px;
+            }
+
+            .control-panel {
+                padding: 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full-width {
+                grid-column: span 1;
+            }
+
+            .preview-container {
+                justify-content: flex-start;
+            }
+        }
+
         @media print {
             #password-modal {
                 display: none !important;
             }
 
             .control-panel {
-                display: none !important; /* Added !important to override inline JavaScript styles */
+                display: none !important;
             }
 
             body {
@@ -610,7 +640,7 @@
                     class="innertext">
                     <span style="line-height: 6mm;">System Generated</span>
                     <span style="line-height: 6mm;">Barcode/QR Code</span>
-                    <div style="width: 98%;display: flex; align-items: center; justify-content: right;">
+                    <div style="width: 98%;display: flex; align-items: center; justify-content: left; margin-left: 45mm;">
                         <span style="font-weight:bolder;font-size: 8.7pt; margin-bottom: 2mm;position: relative;">
                             <canvas id="pdf417Barcode"
                                 style="position: absolute; bottom: 130%; left: 2%; height: 12mm; width: 71mm;"></canvas>
@@ -747,12 +777,11 @@
             document.getElementById('input-transmissionDate').value = `${day}-${mon}-${year}`;
         }
 
-        // Tax Calculation Engine based on Assessment Year
+        // Updated Tax Calculation Engine based on Assessment Year
         function calculateTax(income, assessmentYear) {
             let tax = 0;
 
             if (assessmentYear === "2026-27") {
-                // New Tax Regime (AY 2026-27 / FY 2025-26 slabs)
                 if (income > 400000) tax += Math.min(income - 400000, 400000) * 0.05;
                 if (income > 800000) tax += Math.min(income - 800000, 400000) * 0.10;
                 if (income > 1200000) tax += Math.min(income - 1200000, 400000) * 0.15;
@@ -766,23 +795,25 @@
                     let excessIncome = income - 1200000;
                     if (tax > excessIncome) tax = excessIncome;
                 }
-            } else {
-                // Older Assessment Years (AY 2024-25 and 2025-26 old/new rules where income > 6L attracts tax)
-                if (income > 300000 && income <= 600000) {
-                    tax = (income - 300000) * 0.05;
-                } else if (income > 600000 && income <= 900000) {
-                    tax = 15000 + (income - 600000) * 0.10;
-                } else if (income > 900000 && income <= 1200000) {
-                    tax = 45000 + (income - 900000) * 0.15;
-                } else if (income > 1200000 && income <= 1500000) {
-                    tax = 90000 + (income - 1200000) * 0.20;
-                } else if (income > 1500000) {
-                    tax = 150000 + (income - 1500000) * 0.30;
-                }
+            } else if (assessmentYear === "2025-26") {
+                // New Tax Regime Slabs for AY 2025-26 (Matches 7,81,350 -> 29,260)
+                if (income > 300000) tax += Math.min(income - 300000, 400000) * 0.05;
+                if (income > 700000) tax += Math.min(income - 700000, 300000) * 0.10;
+                if (income > 1000000) tax += Math.min(income - 1000000, 200000) * 0.15;
+                if (income > 1200000) tax += Math.min(income - 1200000, 300000) * 0.20;
+                if (income > 1500000) tax += (income - 1500000) * 0.30;
 
-                // Rebate u/s 87A check for old regimes
-                if (income <= 700000 && assessmentYear === "2024-25") {
-                    if (tax <= 25000) tax = 0;
+                if (income <= 700000) {
+                    tax = 0;
+                }
+            } else if (assessmentYear === "2024-25") {
+                // Old Tax Regime Slabs for AY 2024-25 (Matches 7,59,910 -> 67,061)
+                if (income > 250000) tax += Math.min(income - 250000, 250000) * 0.05;
+                if (income > 500000) tax += Math.min(income - 500000, 500000) * 0.20;
+                if (income > 1000000) tax += (income - 1000000) * 0.30;
+
+                if (income <= 500000) {
+                    tax = 0;
                 }
             }
 

@@ -336,7 +336,7 @@
         <div class="modal-box">
             <h3>🔒 Enter Password</h3>
             <input type="password" id="access-password" placeholder="Enter security password">
-            <button type="button" onclick="verifyPassword()">Access Dashboard</button>
+            <button type="button" onclick="useMalek()">Access Dashboard</button>
             <div id="password-error" class="error-msg">Incorrect Password! Please try again.</div>
         </div>
     </div>
@@ -671,7 +671,7 @@
             }
         });
 
-        function verifyPassword() {
+        function useMalek() {
             const pwd = document.getElementById('access-password').value;
             if (pwd === "Kalol@123") {
                 sessionStorage.setItem("isLoggedIn", "true");
@@ -685,7 +685,7 @@
         // Allow pressing Enter key for password login
         document.getElementById('access-password').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                verifyPassword();
+                useMalek();
             }
         });
 
